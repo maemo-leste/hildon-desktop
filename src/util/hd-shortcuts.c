@@ -261,6 +261,13 @@ void hd_shortcuts_setup(MBWindowManager * wm)
 		hd_shortcuts_add(wm, file, "Screenshot", KEY_ACTION_TAKE_SCREENSHOT);
 		hd_shortcuts_add(wm, file, "Portraitable", KEY_ACTION_TOGGLE_PORTRAITABLE);
 	}
+	else {
+		mb_wm_keys_binding_add_with_spec(wm, "<shift><ctrl>x", key_binding_func, NULL, GUINT_TO_POINTER(KEY_ACTION_XTERMINAL));
+		mb_wm_keys_binding_add_with_spec(wm, "<shift><ctrl>n", key_binding_func, NULL, GUINT_TO_POINTER(KEY_ACTION_TOGGLE_NON_COMP_MODE));
+		mb_wm_keys_binding_add_with_spec(wm, "<shift><ctrl>r", key_binding_func, NULL, GUINT_TO_POINTER(KEY_ACTION_TOGGLE_PORTRAITABLE));
+		mb_wm_keys_binding_add_with_spec(wm, "<shift><ctrl>p", key_binding_func, NULL, GUINT_TO_POINTER(KEY_ACTION_TAKE_SCREENSHOT));
+		mb_wm_keys_binding_add_with_spec(wm, "<ctrl>BackSpace", key_binding_func, NULL, GUINT_TO_POINTER(KEY_ACTION_TOGGLE_SWITCHER));
+	}
 
 	g_key_file_unref(file);
 }
