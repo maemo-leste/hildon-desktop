@@ -14,6 +14,7 @@
 #include "hd-note.h"
 #include "hd-transition.h"
 #include "hd-render-manager.h"
+#include "hd-xinput.h"
 
 #include <gdk/gdk.h>
 
@@ -495,7 +496,8 @@ hd_util_change_screen_orientation_real (MBWindowManager *wm,
 
       /* Allow clients to redraw. */
       XUngrabServer (wm->xdpy);
-      XFlush (wm->xdpy);  /* <-- this is required to avoid a lock-up */
+      XSync(wm->xdpy, FALSE); /* <-- this is required to avoid a lock-up */
+      hd_rotate_input_devices (wm->xdpy);
     }
 
   rv = TRUE;

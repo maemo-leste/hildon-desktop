@@ -42,7 +42,6 @@
 #include <clutter/x11/clutter-x11.h>
 #include <clutter/clutter-container.h>
 #include <gdk-pixbuf-xlib/gdk-pixbuf-xlib.h>
-#include <X11/extensions/XInput.h>
 
 #include "hildon-desktop.h"
 #include "hd-wm.h"
@@ -56,6 +55,7 @@
 #include "hd-orientation-lock.h"
 #include "hd-home.h"
 #include "hd-shortcuts.h"
+#include "hd-xinput.h"
 
 #ifndef DISABLE_A11Y
 #include "hildon-desktop-a11y.h"
@@ -71,16 +71,6 @@ gboolean hd_debug_mode_set = FALSE;
 static int hd_clutter_mutex_enabled = FALSE;
 static int hd_clutter_mutex_do_unlock_after_disabling = FALSE;
 static GMutex hd_clutter_mutex;
-
-static int xi_motion_ev_type = -1;
-static int xi_presence_ev_type = -1;
-
-typedef struct {
-  gboolean is_ts;
-  XDevice *dev;
-} hd_xi_device;
-
-static GArray *xi_devices = NULL;
 
 void hd_mutex_enable (int setting)
 {
@@ -156,97 +146,6 @@ theme_button_type_func (const char *type_name,
   return 0;
 }
 
-/* Close all input devices previously opened */
-static void
-close_input_devices (Display *dpy)
-{
-  int i;
-
-  for (i = 0; i < xi_devices->len; i++)
-    {
-      hd_xi_device *xi_dev = &g_array_index (xi_devices, hd_xi_device, i);
-
-      if (xi_dev->dev)
-        {
-          XCloseDevice (dpy, xi_dev->dev);
-          xi_dev->dev = NULL;
-        }
-    }
-}
-
-/* Fill in the array with input devices type is touchscreen */
-static void
-enumerate_input_devices (Display *dpy)
-{
-  XDeviceInfo *devinfo;
-  int i, ndev;
-  GArray *eclass;
-
-  if (xi_devices)
-    {
-      close_input_devices (dpy);
-      g_array_free (xi_devices, TRUE);
-      xi_devices = NULL;
-    }
-
-  /* get XInput DeviceMotion events */
-  devinfo = XListInputDevices (dpy, &ndev);
-
-  eclass = g_array_new (FALSE, FALSE, sizeof (XEventClass));
-  xi_devices = g_array_new (FALSE, TRUE, sizeof (hd_xi_device));
-
-  if (!devinfo)
-    goto done;
-
-  for (i = 0; i < ndev; i++)
-    {
-      XDeviceInfo info = devinfo[i];
-
-      if (info.use != IsXPointer && info.use != IsXKeyboard)
-        {
-          XAnyClassPtr ci = info.inputclassinfo;
-          int j;
-
-          for (j = 0; j < info.num_classes; j++)
-            {
-              if (ci->class == ValuatorClass)
-                {
-                  XEventClass ev_class;
-                  XDevice *dev = XOpenDevice (dpy, info.id);
-                  XID id = info.id;
-                  XValuatorInfo *vi = (XValuatorInfo *)ci;
-
-                  if (xi_devices->len <= id)
-                    g_array_set_size(xi_devices, id + 1);
-
-                  hd_xi_device *xi_dev =
-                      &g_array_index (xi_devices, hd_xi_device, id);
-
-                  DeviceMotionNotify (dev, xi_motion_ev_type, ev_class);
-                  g_array_append_val (eclass, ev_class);
-
-                  xi_dev->is_ts = (vi->mode & DeviceMode) == Absolute;
-                  xi_dev->dev = dev;
-                  break;
-                }
-              ci = (XAnyClassPtr)((char *)ci + ci->length);
-            }
-        }
-    }
-
-  XFreeDeviceList (devinfo);
-
-  if (eclass->len)
-    {
-      XSelectExtensionEvent (dpy,
-                             RootWindow (dpy, clutter_x11_get_default_screen()),
-                             (XEventClass *)eclass->data, eclass->len);
-    }
-
-done:
-  g_array_free (eclass, TRUE);
-}
-
 static ClutterX11FilterReturn
 clutter_x11_event_filter (XEvent *xev, ClutterEvent *cev, gpointer data)
 {
@@ -268,7 +167,10 @@ clutter_x11_event_filter (XEvent *xev, ClutterEvent *cev, gpointer data)
         }
     }
   else if (xev->type == xi_presence_ev_type)
-    enumerate_input_devices (clutter_x11_get_default_display ());
+  {
+    hd_enumerate_input_devices (clutter_x11_get_default_display ());
+    hd_rotate_input_devices (clutter_x11_get_default_display ());
+  }
 
   mb_wm_main_context_handle_x_event (xev, wm->main_ctx);
 
@@ -587,7 +489,8 @@ main (int argc, char **argv)
   XSelectExtensionEvent (dpy,
                          RootWindow (dpy, clutter_x11_get_default_screen ()),
                          &class_presence, 1);
-  enumerate_input_devices (dpy);
+  hd_enumerate_input_devices (dpy);
+  hd_rotate_input_devices (dpy);
 
   clutter_x11_add_filter (clutter_x11_event_filter, wm);
 
@@ -619,7 +522,7 @@ main (int argc, char **argv)
   gtk_main ();
 
   if (xi_devices)
-    close_input_devices (dpy);
+    hd_close_input_devices (dpy);
 
   mb_wm_object_unref (MB_WM_OBJECT (wm));
 
