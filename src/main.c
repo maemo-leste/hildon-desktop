@@ -146,40 +146,6 @@ theme_button_type_func (const char *type_name,
   return 0;
 }
 
-static ClutterX11FilterReturn
-clutter_x11_event_filter (XEvent *xev, ClutterEvent *cev, gpointer data)
-{
-  MBWindowManager * wm = data;
-
-  if (xev->type == ButtonPress)
-    hd_render_manager_press_effect ();
-  else if (xev->type == xi_motion_ev_type)
-    {
-      XDeviceMotionEvent *mev = (XDeviceMotionEvent *)xev;
-      XID devid = mev->deviceid;
-
-      if (devid < xi_devices->len)
-        {
-          hd_xi_device *xi_dev = &g_array_index (
-                                   xi_devices, hd_xi_device, devid);
-
-          wm_set_cursor_visibility (wm, !xi_dev->is_ts);
-        }
-    }
-  else if (xev->type == xi_presence_ev_type)
-  {
-    hd_enumerate_input_devices (clutter_x11_get_default_display ());
-    hd_rotate_input_devices (clutter_x11_get_default_display ());
-  }
-
-  mb_wm_main_context_handle_x_event (xev, wm->main_ctx);
-
-  if (wm->sync_type)
-    mb_wm_sync (wm);
-
-  return CLUTTER_X11_FILTER_CONTINUE;
-}
-
 /* Debugging aids */
 static gboolean
 dump_debug_info_when_idle (gpointer unused)
@@ -483,16 +449,10 @@ main (int argc, char **argv)
   
   hd_shortcuts_setup(wm);
 
-  /* Register for input devices changes events, needed for cursor visibility */
-  XEventClass class_presence;
-  DevicePresence (dpy, xi_presence_ev_type, class_presence);
-  XSelectExtensionEvent (dpy,
-                         RootWindow (dpy, clutter_x11_get_default_screen ()),
-                         &class_presence, 1);
   hd_enumerate_input_devices (dpy);
   hd_rotate_input_devices (dpy);
 
-  clutter_x11_add_filter (clutter_x11_event_filter, wm);
+  clutter_x11_add_filter (hd_clutter_x11_event_filter, wm);
 
   app_mgr = hd_app_mgr_get ();
 
@@ -521,8 +481,7 @@ main (int argc, char **argv)
    * so everything *should* be covered this way. */
   gtk_main ();
 
-  if (xi_devices)
-    hd_close_input_devices (dpy);
+  hd_close_input_devices (dpy);
 
   mb_wm_object_unref (MB_WM_OBJECT (wm));
 

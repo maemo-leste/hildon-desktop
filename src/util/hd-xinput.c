@@ -6,6 +6,8 @@
 #include <X11/extensions/Xrandr.h>
 #include <clutter/clutter-main.h>
 #include <clutter/x11/clutter-x11.h>
+#include <matchbox/core/mb-wm.h>
+#include "home/hd-render-manager.h"
 
 #define RR_Reflect_All	(RR_Reflect_X|RR_Reflect_Y)
 
@@ -13,15 +15,19 @@ GArray *xi_devices = NULL;
 int xi_motion_ev_type = -1;
 int xi_presence_ev_type = -1;
 
+typedef struct {
+	gboolean is_ts;
+	XDevice *dev;
+} hd_xi_device;
+
 typedef struct Matrix {
 	float m[9];
 } Matrix;
 
-void hd_close_input_devices(Display * dpy)
+void hd_close_input_devices(Display *dpy)
 {
-	for (int i = 0; i < xi_devices->len; i++) {
-		hd_xi_device *xi_dev =
-		    &g_array_index(xi_devices, hd_xi_device, i);
+	for (int i = 0; xi_devices && i < xi_devices->len; i++) {
+		hd_xi_device *xi_dev = &g_array_index(xi_devices, hd_xi_device, i);
 		if (xi_dev->dev) {
 			XCloseDevice(dpy, xi_dev->dev);
 			xi_dev->dev = NULL;
@@ -29,11 +35,17 @@ void hd_close_input_devices(Display * dpy)
 	}
 }
 
-void hd_enumerate_input_devices(Display * dpy)
+void hd_enumerate_input_devices(Display *dpy)
 {
 	XDeviceInfo *devinfo;
 	int i, ndev;
 	GArray *eclass;
+	XEventClass class_presence;
+
+	/* Register for input devices changes events, needed for cursor visibility */
+	DevicePresence(dpy, xi_presence_ev_type, class_presence);
+	XSelectExtensionEvent(dpy, RootWindow(dpy, clutter_x11_get_default_screen()),
+			      &class_presence, 1);
 
 	if (xi_devices) {
 		hd_close_input_devices(dpy);
@@ -60,27 +72,20 @@ void hd_enumerate_input_devices(Display * dpy)
 			for (j = 0; j < info.num_classes; j++) {
 				if (ci->class == ValuatorClass) {
 					XEventClass ev_class;
-					XDevice *dev =
-					    XOpenDevice(dpy, info.id);
+					XDevice *dev = XOpenDevice(dpy, info.id);
 					XID id = info.id;
-					XValuatorInfo *vi =
-					    (XValuatorInfo *) ci;
+					XValuatorInfo *vi = (XValuatorInfo *) ci;
 
 					if (xi_devices->len <= id)
-						g_array_set_size(xi_devices,
-								 id + 1);
+						g_array_set_size(xi_devices, id + 1);
 
-					hd_xi_device *xi_dev =
-					    &g_array_index(xi_devices,
-							   hd_xi_device, id);
+					hd_xi_device *xi_dev = &g_array_index(xi_devices,
+									      hd_xi_device, id);
 
-					DeviceMotionNotify(dev,
-							   xi_motion_ev_type,
-							   ev_class);
+					DeviceMotionNotify(dev, xi_motion_ev_type, ev_class);
 					g_array_append_val(eclass, ev_class);
 
-					xi_dev->is_ts =
-					    (vi->mode & DeviceMode) == Absolute;
+					xi_dev->is_ts = (vi->mode & DeviceMode) == Absolute;
 					xi_dev->dev = dev;
 					break;
 				}
@@ -92,19 +97,15 @@ void hd_enumerate_input_devices(Display * dpy)
 	XFreeDeviceList(devinfo);
 
 	if (eclass->len) {
-		XSelectExtensionEvent(dpy,
-				      RootWindow(dpy,
-						 clutter_x11_get_default_screen
-						 ()),
-				      (XEventClass *) eclass->data,
-				      eclass->len);
+		XSelectExtensionEvent(dpy, RootWindow(dpy, clutter_x11_get_default_screen()),
+				      (XEventClass *) eclass->data, eclass->len);
 	}
 
  done:
 	g_array_free(eclass, TRUE);
 }
 
-static int apply_matrix(Display * dpy, int deviceid, Matrix * m)
+static int apply_matrix(Display *dpy, int deviceid, Matrix *m)
 {
 	Atom prop_float, prop_matrix;
 
@@ -116,50 +117,45 @@ static int apply_matrix(Display * dpy, int deviceid, Matrix * m)
 	Atom type_return;
 	unsigned long nitems;
 	unsigned long bytes_after;
-
 	int rc;
 
 	prop_float = XInternAtom(dpy, "FLOAT", False);
-	prop_matrix =
-	    XInternAtom(dpy, "Coordinate Transformation Matrix", False);
+	prop_matrix = XInternAtom(dpy, "Coordinate Transformation Matrix", False);
 
 	if (!prop_float) {
-		fprintf(stderr,
-			"Float atom not found. This server is too old.\n");
+		fprintf(stderr, "Float atom not found. This server is too old.\n");
 		return EXIT_FAILURE;
 	}
 	if (!prop_matrix) {
 		fprintf(stderr,
-			"Coordinate transformation matrix not found. This "
-			"server is too old\n");
+			"Coordinate transformation matrix not found. This server is too old\n");
 		return EXIT_FAILURE;
 	}
 
 	rc = XIGetProperty(dpy, deviceid, prop_matrix, 0, 9, False, prop_float,
-			   &type_return, &format_return, &nitems, &bytes_after,
-			   &data.c);
-	if (rc != Success || prop_float != type_return || format_return != 32 ||
-	    nitems != 9 || bytes_after != 0) {
+			   &type_return, &format_return, &nitems, &bytes_after, &data.c);
+	if (rc != Success || prop_float != type_return || format_return != 32 || nitems != 9
+	    || bytes_after != 0) {
 		fprintf(stderr, "Failed to retrieve current property values\n");
 		return EXIT_FAILURE;
 	}
 
 	memcpy(data.f, m->m, sizeof(m->m));
 
-	XIChangeProperty(dpy, deviceid, prop_matrix, prop_float,
-			 format_return, PropModeReplace, data.c, nitems);
+	XIChangeProperty(dpy, deviceid, prop_matrix, prop_float, format_return, PropModeReplace,
+			 data.c, nitems);
 
 	XFree(data.c);
 
 	return EXIT_SUCCESS;
 }
 
-static void matrix_set(Matrix * m, int row, int col, float val)
+static void matrix_set(Matrix *m, int row, int col, float val)
 {
 	m->m[row * 3 + col] = val;
 }
 
-static void matrix_set_unity(Matrix * m)
+static void matrix_set_unity(Matrix *m)
 {
 	memset(m, 0, sizeof(m->m));
 	matrix_set(m, 0, 0, 1);
@@ -167,8 +163,7 @@ static void matrix_set_unity(Matrix * m)
 	matrix_set(m, 2, 2, 1);
 }
 
-static void matrix_s4(Matrix * m, float x02, float x12, float d1, float d2,
-		      int main_diag)
+static void matrix_s4(Matrix *m, float x02, float x12, float d1, float d2, int main_diag)
 {
 	matrix_set(m, 0, 2, x02);
 	matrix_set(m, 1, 2, x12);
@@ -184,11 +179,11 @@ static void matrix_s4(Matrix * m, float x02, float x12, float d1, float d2,
 	}
 }
 
-static void set_transformation_matrix(Matrix * m, int offset_x, int offset_y,
-				      int screen_width, int screen_height,
-				      int rotation)
+static void set_transformation_matrix(Matrix *m, int offset_x, int offset_y,
+				      int screen_width, int screen_height, int rotation)
 {
 	Display *dpy = XOpenDisplay(NULL);
+
 	if (dpy == NULL)
 		dpy = XOpenDisplay(":0.0");
 
@@ -258,7 +253,7 @@ static void set_transformation_matrix(Matrix * m, int offset_x, int offset_y,
 	XCloseDisplay(dpy);
 }
 
-static XRROutputInfo *find_output_xrandr(Display * dpy)
+static XRROutputInfo *find_output_xrandr(Display *dpy)
 {
 	XRRScreenResources *res;
 	XRROutputInfo *output_info = NULL;
@@ -270,8 +265,7 @@ static XRROutputInfo *find_output_xrandr(Display * dpy)
 	for (i = 0; i < res->noutput && !found; i++) {
 		output_info = XRRGetOutputInfo(dpy, res, res->outputs[i]);
 
-		if (output_info->crtc
-		    && output_info->connection == RR_Connected) {
+		if (output_info->crtc && output_info->connection == RR_Connected) {
 			found = 1;
 			break;
 		}
@@ -287,7 +281,7 @@ static XRROutputInfo *find_output_xrandr(Display * dpy)
 	return output_info;
 }
 
-static int map_output_xrandr(Display * dpy, int deviceid)
+static int map_output_xrandr(Display *dpy, int deviceid)
 {
 	int rc = EXIT_FAILURE;
 	XRRScreenResources *res;
@@ -303,8 +297,7 @@ static int map_output_xrandr(Display * dpy, int deviceid)
 		matrix_set_unity(&m);
 		crtc_info = XRRGetCrtcInfo(dpy, res, output_info->crtc);
 		set_transformation_matrix(&m, crtc_info->x, crtc_info->y,
-					  crtc_info->width, crtc_info->height,
-					  crtc_info->rotation);
+					  crtc_info->width, crtc_info->height, crtc_info->rotation);
 		rc = apply_matrix(dpy, deviceid, &m);
 		XRRFreeCrtcInfo(crtc_info);
 		XRRFreeOutputInfo(output_info);
@@ -315,19 +308,43 @@ static int map_output_xrandr(Display * dpy, int deviceid)
 	return rc;
 }
 
-int hd_rotate_input_devices(Display * dpy)
+int hd_rotate_input_devices(Display *dpy)
 {
 	int ret = 0;
 
-	for (int i = 0; i < xi_devices->len; i++) {
-		hd_xi_device *xi_dev =
-		    &g_array_index(xi_devices, hd_xi_device, i);
-		if (xi_dev->dev && xi_dev->is_ts) {
-			ret =
-			    ret & map_output_xrandr(dpy,
-						    xi_dev->dev->device_id);
-		}
+	for (int i = 0; xi_devices && i < xi_devices->len; i++) {
+		hd_xi_device *xi_dev = &g_array_index(xi_devices, hd_xi_device, i);
+		if (xi_dev->dev && xi_dev->is_ts)
+			ret &= map_output_xrandr(dpy, xi_dev->dev->device_id);
 	}
 
 	return ret;
+}
+
+ClutterX11FilterReturn hd_clutter_x11_event_filter(XEvent *xev, ClutterEvent *cev, gpointer data)
+{
+	MBWindowManager *wm = data;
+
+	if (xev->type == ButtonPress) {
+		hd_render_manager_press_effect();
+	} else if (xev->type == xi_motion_ev_type) {
+		XDeviceMotionEvent *mev = (XDeviceMotionEvent *) xev;
+		XID devid = mev->deviceid;
+
+		if (devid < xi_devices->len) {
+			hd_xi_device *xi_dev = &g_array_index(xi_devices, hd_xi_device, devid);
+
+			wm_set_cursor_visibility(wm, !xi_dev->is_ts);
+		}
+	} else if (xev->type == xi_presence_ev_type) {
+		hd_enumerate_input_devices(clutter_x11_get_default_display());
+		hd_rotate_input_devices(clutter_x11_get_default_display());
+	}
+
+	mb_wm_main_context_handle_x_event(xev, wm->main_ctx);
+
+	if (wm->sync_type)
+		mb_wm_sync(wm);
+
+	return CLUTTER_X11_FILTER_CONTINUE;
 }
