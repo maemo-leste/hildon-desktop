@@ -5,7 +5,8 @@ util_h = 	hd-util.h		\
 		hd-gtk-style.h		\
 		hd-gtk-utils.h		\
 		hd-volume-profile.h		\
-		hd-transition.h
+		hd-transition.h \
+		hd-xinput.h
 
 util_c = 	hd-util.c		\
 		hd-dbus.c         \
@@ -13,7 +14,8 @@ util_c = 	hd-util.c		\
 		hd-gtk-utils.c		\
 		hd-volume-profile.c		\
 		hd-transition.c \
-		hd-shortcuts.c
+		hd-shortcuts.c \
+		hd-xinput.c
 
 noinst_LTLIBRARIES = libutil.la
 
