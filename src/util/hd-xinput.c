@@ -11,9 +11,9 @@
 
 #define RR_Reflect_All	(RR_Reflect_X|RR_Reflect_Y)
 
-GArray *xi_devices = NULL;
-int xi_motion_ev_type = -1;
-int xi_presence_ev_type = -1;
+static GArray *xi_devices = NULL;
+static int xi_motion_ev_type = -1;
+static int xi_presence_ev_type = -1;
 
 typedef struct {
 	gboolean is_ts;
