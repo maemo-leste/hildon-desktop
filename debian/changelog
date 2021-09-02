@@ -1,3 +1,11 @@
+hildon-desktop (1:2.2.182) unstable; urgency=medium
+
+  * add support for rotating xinput touchscreens when entering or leaving
+    portrait mode
+  * Enable some default shortcuts if no shortcuts.ini exits
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Sun, 01 Nov 2020 12:15:17 +0200
+
 hildon-desktop (1:2.2.181) unstable; urgency=medium
 
   * Bump version for newer libmatchbox2
