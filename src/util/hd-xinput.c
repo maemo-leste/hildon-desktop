@@ -24,6 +24,15 @@ typedef struct Matrix {
 	float m[9];
 } Matrix;
 
+void hd_init_xinput(Display *dpy)
+{
+	static XEventClass class_presence;
+	/* Register for input devices changes events, needed for cursor visibility */
+	DevicePresence(dpy, xi_presence_ev_type, class_presence);
+	XSelectExtensionEvent(dpy, RootWindow(dpy, clutter_x11_get_default_screen()),
+			      &class_presence, 1);
+}
+
 void hd_close_input_devices(Display *dpy)
 {
 	for (int i = 0; xi_devices && i < xi_devices->len; i++) {
@@ -40,12 +49,6 @@ void hd_enumerate_input_devices(Display *dpy)
 	XDeviceInfo *devinfo;
 	int i, ndev;
 	GArray *eclass;
-	XEventClass class_presence;
-
-	/* Register for input devices changes events, needed for cursor visibility */
-	DevicePresence(dpy, xi_presence_ev_type, class_presence);
-	XSelectExtensionEvent(dpy, RootWindow(dpy, clutter_x11_get_default_screen()),
-			      &class_presence, 1);
 
 	if (xi_devices) {
 		hd_close_input_devices(dpy);

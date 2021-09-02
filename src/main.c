@@ -449,6 +449,7 @@ main (int argc, char **argv)
   
   hd_shortcuts_setup(wm);
 
+  hd_init_xinput (dpy);
   hd_enumerate_input_devices (dpy);
   hd_rotate_input_devices (dpy);
 

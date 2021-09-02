@@ -15,4 +15,6 @@ int hd_rotate_input_devices(Display *dpy);
 
 ClutterX11FilterReturn hd_clutter_x11_event_filter(XEvent *xev, ClutterEvent *cev, gpointer data);
 
+void hd_init_xinput(Display *dpy);
+
 #endif
