@@ -638,22 +638,41 @@ hd_util_click (const MBWindowManagerClient *c)
 {
   Window xwin;
   Display *xdpy;
-  XButtonEvent ev;
+  XButtonEvent button_event;
+  XCrossingEvent crossing_event;
 
   xwin = c->window->xwindow;
   xdpy = c->wmref->xdpy;
 
-  memset (&ev, 0, sizeof (ev));
-  ev.type         = ButtonPress;
-  ev.send_event   = True;
-  ev.display      = xdpy;
-  ev.window       = xwin;
-  ev.root         = DefaultRootWindow (xdpy);
-  ev.time         = CurrentTime;
-  ev.button       = Button1;
-  ev.same_screen  = True;
+  memset (&crossing_event, 0, sizeof (crossing_event));
+  crossing_event.type = EnterNotify;
+  crossing_event.display = xdpy;
+  crossing_event.window = xwin;
+  crossing_event.root = DefaultRootWindow (xdpy);
+  crossing_event.subwindow = None;
+  crossing_event.time = CurrentTime;
+  crossing_event.x = 0;
+  crossing_event.y = 0;
+  crossing_event.x_root = 0;
+  crossing_event.y_root = 0;
+  crossing_event.mode = NotifyNormal;
+  crossing_event.detail = NotifyAncestor;
+  crossing_event.same_screen = True;
+  crossing_event.focus = False;
+  crossing_event.state = 0;
+  XSendEvent(xdpy, xwin, False, EnterWindowMask, (XEvent *)&crossing_event);
 
-  XSendEvent(xdpy, xwin, False, ButtonPressMask, (XEvent *)&ev);
+  memset (&button_event, 0, sizeof (button_event));
+  button_event.type         = ButtonPress;
+  button_event.send_event   = True;
+  button_event.display      = xdpy;
+  button_event.window       = xwin;
+  button_event.root         = DefaultRootWindow (xdpy);
+  button_event.time         = CurrentTime;
+  button_event.button       = Button1;
+  button_event.same_screen  = True;
+
+  XSendEvent(xdpy, xwin, False, ButtonPressMask, (XEvent *)&button_event);
 }
 
 /* Try and get the translated bounds for an actor (the actual pixel position
