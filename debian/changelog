@@ -1,3 +1,9 @@
+hildon-desktop (1:2.2.183) unstable; urgency=medium
+
+  * Send EnterNotify when sending ButtonPress to hildon-home
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Wed, 29 Sep 2021 19:18:24 +0300
+
 hildon-desktop (1:2.2.182) unstable; urgency=medium
 
   * add support for rotating xinput touchscreens when entering or leaving
