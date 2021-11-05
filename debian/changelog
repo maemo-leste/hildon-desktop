@@ -1,3 +1,9 @@
+hildon-desktop (1:2.2.184) unstable; urgency=medium
+
+  * Deal with broken N900 DDX
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Fri, 05 Nov 2021 19:35:01 +0100
+
 hildon-desktop (1:2.2.183) unstable; urgency=medium
 
   * Send EnterNotify when sending ButtonPress to hildon-home
