@@ -2,6 +2,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <X11/extensions/XInput2.h>
 #include <X11/extensions/Xrandr.h>
 #include <clutter/clutter-main.h>
@@ -256,6 +257,18 @@ static void set_transformation_matrix(Matrix *m, int offset_x, int offset_y,
 	XCloseDisplay(dpy);
 }
 
+static bool matrix_is_sane(const Matrix * const m)
+{
+	for(size_t j = 0; j < 2; ++j) {
+		float accum = 0;
+		for(size_t i = 0; i < 3; ++i)
+			accum += abs(m->m[j*3+i]);
+		if(accum < 0.1)
+			return false;
+	}
+	return true;
+}
+
 static XRROutputInfo *find_output_xrandr(Display *dpy)
 {
 	XRRScreenResources *res;
@@ -301,7 +314,8 @@ static int map_output_xrandr(Display *dpy, int deviceid)
 		crtc_info = XRRGetCrtcInfo(dpy, res, output_info->crtc);
 		set_transformation_matrix(&m, crtc_info->x, crtc_info->y,
 					  crtc_info->width, crtc_info->height, crtc_info->rotation);
-		rc = apply_matrix(dpy, deviceid, &m);
+		if(matrix_is_sane(&m))
+			rc = apply_matrix(dpy, deviceid, &m);
 		XRRFreeCrtcInfo(crtc_info);
 		XRRFreeOutputInfo(output_info);
 	}
