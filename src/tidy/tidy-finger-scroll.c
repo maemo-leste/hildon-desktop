@@ -23,6 +23,7 @@
 #include <math.h>
 
 #include <clutter/clutter.h>
+#include <stdint.h>
 
 #include "tidy-finger-scroll.h"
 #include "tidy-enum-types.h"
@@ -579,7 +580,9 @@ button_release_event_cb (ClutterActor *actor,
                                                &x, &y))
         {
           ClutterUnit frac, x_origin, y_origin;
-          GTimeVal release_time, motion_time;
+          GTimeVal release_time;
+          int64_t motion_time_sec = 0;
+          int32_t motion_time_usec = 0;
           TidyAdjustment *hadjust, *vadjust;
           glong time_diff;
           gint i;
@@ -590,20 +593,14 @@ button_release_event_cb (ClutterActor *actor,
           /* Get average position/time of last x mouse events */
           priv->last_motion ++;
           x_origin = y_origin = 0;
-          motion_time = (GTimeVal){ 0, 0 };
           for (i = 0; i < priv->last_motion; i++)
             {
               TidyFingerScrollMotion *motion =
                 &g_array_index (priv->motion_buffer, TidyFingerScrollMotion, i);
-
-              /* FIXME: This doesn't guard against overflows - Should
-               *        either fix that, or calculate the correct maximum
-               *        value for the buffer size
-               */
               x_origin += motion->x;
               y_origin += motion->y;
-              motion_time.tv_sec += motion->time.tv_sec;
-              motion_time.tv_usec += motion->time.tv_usec;
+              motion_time_sec += motion->time.tv_sec;
+              motion_time_usec+= motion->time.tv_usec;
             }
           x_origin = CLUTTER_UNITS_FROM_FIXED (
             clutter_qdivx (CLUTTER_UNITS_TO_FIXED (x_origin),
@@ -611,14 +608,14 @@ button_release_event_cb (ClutterActor *actor,
           y_origin = CLUTTER_UNITS_FROM_FIXED (
             clutter_qdivx (CLUTTER_UNITS_TO_FIXED (y_origin),
                            CLUTTER_INT_TO_FIXED (priv->last_motion)));
-          motion_time.tv_sec /= priv->last_motion;
-          motion_time.tv_usec /= priv->last_motion;
+          motion_time_sec /= priv->last_motion;
+          motion_time_usec /= priv->last_motion;
 
-          if (motion_time.tv_sec == release_time.tv_sec)
-            time_diff = release_time.tv_usec - motion_time.tv_usec;
-          else
+         if (motion_time_sec == release_time.tv_sec)
+            time_diff = release_time.tv_usec - motion_time_usec;
+         else
             time_diff = release_time.tv_usec +
-                        (G_USEC_PER_SEC - motion_time.tv_usec);
+                          (G_USEC_PER_SEC - motion_time_usec);
 
           /* Work out the fraction of 1/60th of a second that has elapsed */
           frac = clutter_qdivx (CLUTTER_FLOAT_TO_FIXED (time_diff/1000.0),
