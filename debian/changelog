@@ -1,3 +1,9 @@
+hildon-desktop (1:2.2.185) unstable; urgency=medium
+
+  * Fix time overflow bug in tidy-finger-scroll
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Wed, 01 Dec 2021 12:07:33 +0100
+
 hildon-desktop (1:2.2.184) unstable; urgency=medium
 
   * Deal with broken N900 DDX
