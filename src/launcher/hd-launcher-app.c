@@ -261,10 +261,10 @@ hd_launcher_app_parse_keyfile (HdLauncherItem *item,
         term = g_find_program_in_path(g_path_get_basename("x-terminal-emulator"));
 
       if (term) {
-        priv->exec = g_strdup_printf("%s %s", term, old_exec);
+        priv->exec = g_strdup_printf("%s '%s'", term, old_exec);
         g_free(term);
       } else
-        priv->exec = g_strdup_printf("%s %s", "osso-xterm", old_exec);
+        priv->exec = g_strdup_printf("%s '%s'", "osso-xterm", old_exec);
 
       g_free(old_exec);
   }
