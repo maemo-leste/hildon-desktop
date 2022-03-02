@@ -1,3 +1,9 @@
+hildon-desktop (1:2.2.186) unstable; urgency=medium
+
+  * Fix arguments to osso-xterm
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Wed, 02 Mar 2022 14:42:06 +0100
+
 hildon-desktop (1:2.2.185) unstable; urgency=medium
 
   * Fix time overflow bug in tidy-finger-scroll
