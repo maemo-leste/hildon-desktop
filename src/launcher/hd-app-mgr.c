@@ -51,6 +51,7 @@
 #include "hd-transition.h"
 #include "hd-wm.h"
 #include "hd-orientation-lock.h"
+#include "../util/hd-dbus.h"
 
 #undef  G_LOG_DOMAIN
 #define G_LOG_DOMAIN "hd-app-mgr"
@@ -284,6 +285,7 @@ static void hd_app_mgr_gconf_value_changed (GConfClient *client,
                                             guint cnxn_id,
                                             GConfEntry *entry,
                                             gpointer user_data);
+
 static gboolean hd_app_mgr_show_callui_cb (gpointer data);
 //gboolean hd_app_mgr_check_show_callui (void);
 
@@ -406,6 +408,7 @@ static void
 hd_app_mgr_init (HdAppMgr *self)
 {
   HdAppMgrPrivate *priv;
+  gboolean slide_open = FALSE;
 
   self->priv = priv = HD_APP_MGR_GET_PRIVATE (self);
 
@@ -419,22 +422,16 @@ hd_app_mgr_init (HdAppMgr *self)
                     G_CALLBACK (hd_app_mgr_populate_tree_finished),
                     self);
   hd_launcher_tree_populate (priv->tree);
+  
+  hd_dbus_get_slide_state (&slide_open);
+  priv->slide_closed = !slide_open;
 
   /* NOTE: Can we assume this when we start up? */
   priv->unlocked = TRUE;
   priv->gconf_client = gconf_client_get_default ();
+
   if (priv->gconf_client)
     {
-      priv->slide_closed = !gconf_client_get_bool (priv->gconf_client,
-                                                   GCONF_SLIDE_OPEN_KEY,
-                                                   NULL);
-      gconf_client_add_dir (priv->gconf_client, GCONF_SLIDE_OPEN_DIR,
-                            GCONF_CLIENT_PRELOAD_NONE, NULL);
-      gconf_client_notify_add (priv->gconf_client, GCONF_SLIDE_OPEN_KEY,
-                               hd_app_mgr_gconf_value_changed,
-                               (gpointer) self,
-                               NULL, NULL);
-
       /* We don't call
       hd_app_mgr_mce_activate_accel_if_needed ();
       here because hdrm is not ready yet. */
@@ -2236,6 +2233,48 @@ hd_app_mgr_mce_activate_accel_if_needed (gboolean update_portraitness)
                                priv->portrait && priv->slide_closed);
 }
 
+void hd_app_mgr_inform_slide_state_changed(gboolean slide_state)
+{
+  if(!the_app_mgr)
+    return;
+
+  HdAppMgrPrivate *priv = HD_APP_MGR_GET_PRIVATE (the_app_mgr);
+
+  priv->slide_closed = !slide_state;
+
+  /* Should UI be able to rotate?
+    * Related to the orientation lock (locking to portrait mode). */
+  gboolean allow_ui_to_rotate;
+
+  if (!priv->ui_can_rotate && hd_orientation_lock_is_locked_to_portrait ())
+    allow_ui_to_rotate = TRUE;
+  else
+    allow_ui_to_rotate = priv->ui_can_rotate;
+
+  /* If in LAUNCHER_PORTRAIT with the slide/hkb open, turn it into
+    * landscape mode
+    * If in LAUNCHER with closed slide and device's oriented portrait go to
+    * LAUNCHER_PORTRAIT.
+    * Under any other case just update the portraitness */
+  if (!priv->slide_closed &&
+    STATE_ONE_OF(hd_render_manager_get_state (), HDRM_STATE_LAUNCHER_PORTRAIT | HDRM_STATE_TASK_NAV_PORTRAIT))
+    {
+      /* manually setting the HDAppMgr is a bit of kludge, since it's
+        * supposed to reflect the accellerometer status, but it's needed or
+        * the status change won't work since HDRM will rely on the HdAppMgr
+        * declared orientation to actually change state */
+      gboolean portrait = priv->portrait;
+      priv->portrait = FALSE;
+      hd_render_manager_set_state (hd_render_manager_get_state () == HDRM_STATE_LAUNCHER_PORTRAIT?HDRM_STATE_LAUNCHER:HDRM_STATE_TASK_NAV);
+      priv->portrait = portrait;
+    }
+  else if (priv->slide_closed && priv->portrait && allow_ui_to_rotate &&
+    STATE_ONE_OF(hd_render_manager_get_state () , HDRM_STATE_LAUNCHER | HDRM_STATE_TASK_NAV))
+      hd_render_manager_set_state (hd_render_manager_get_state () == HDRM_STATE_LAUNCHER?HDRM_STATE_LAUNCHER_PORTRAIT:HDRM_STATE_TASK_NAV_PORTRAIT);
+  else
+    hd_app_mgr_update_portraitness(the_app_mgr);
+}
+
 static void
 hd_app_mgr_gconf_value_changed (GConfClient *client,
                                 guint cnxn_id,
@@ -2261,44 +2300,6 @@ hd_app_mgr_gconf_value_changed (GConfClient *client,
       if(hd_home_view_container_get_current_view(hd_home_get_view_container(home)) != gconf_value_get_int(gvalue)-1)
       	hd_home_view_container_set_current_view(hd_home_get_view_container(home), gconf_value_get_int(gvalue)-1);
   }
-
-  if (!g_strcmp0 (gconf_entry_get_key (entry),
-                  GCONF_SLIDE_OPEN_KEY))
-    {
-      priv->slide_closed = !value;
-
-      /* Should UI be able to rotate?
-       * Related to the orientation lock (locking to portrait mode). */
-      gboolean allow_ui_to_rotate;
-
-      if (!priv->ui_can_rotate && hd_orientation_lock_is_locked_to_portrait ())
-        allow_ui_to_rotate = TRUE;
-      else
-        allow_ui_to_rotate = priv->ui_can_rotate;
-
-      /* If in LAUNCHER_PORTRAIT with the slide/hkb open, turn it into
-       * landscape mode
-       * If in LAUNCHER with closed slide and device's oriented portrait go to
-       * LAUNCHER_PORTRAIT.
-       * Under any other case just update the portraitness */
-      if (!priv->slide_closed &&
-        STATE_ONE_OF(hd_render_manager_get_state (), HDRM_STATE_LAUNCHER_PORTRAIT | HDRM_STATE_TASK_NAV_PORTRAIT))
-        {
-          /* manually setting the HDAppMgr is a bit of kludge, since it's
-           * supposed to reflect the accellerometer status, but it's needed or
-           * the status change won't work since HDRM will rely on the HdAppMgr
-           * declared orientation to actually change state */
-          gboolean portrait = priv->portrait;
-          priv->portrait = FALSE;
-          hd_render_manager_set_state (hd_render_manager_get_state () == HDRM_STATE_LAUNCHER_PORTRAIT?HDRM_STATE_LAUNCHER:HDRM_STATE_TASK_NAV);
-          priv->portrait = portrait;
-        }
-      else if (priv->slide_closed && priv->portrait && allow_ui_to_rotate &&
-        STATE_ONE_OF(hd_render_manager_get_state () , HDRM_STATE_LAUNCHER | HDRM_STATE_TASK_NAV))
-          hd_render_manager_set_state (hd_render_manager_get_state () == HDRM_STATE_LAUNCHER?HDRM_STATE_LAUNCHER_PORTRAIT:HDRM_STATE_TASK_NAV_PORTRAIT);
-      else
-        hd_app_mgr_update_portraitness(self);
-    }
       if(gconf_client_dir_exists(priv->gconf_client, GCONF_KEY_ACTIONS_DIR, NULL)) {
 	      conf_enable_home_contacts_phone = gconf_client_get_bool(priv->gconf_client, 
 			      GCONF_KEY_ACTIONS_DIR "/home_contacts_phone", NULL);

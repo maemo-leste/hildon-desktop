@@ -6,6 +6,7 @@
 #include "hd-volume-profile.h"
 #include "hd-task-navigator.h"
 #include "hd-dbus.h"
+#include "../launcher/hd-app-mgr.h"
 
 #include <glib.h>
 #include <mce/dbus-names.h>
@@ -147,9 +148,6 @@ hd_dbus_signal_handler (DBusConnection *conn, DBusMessage *msg, void *data)
 	    }
     }
 
-
-
-
   return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 }
 
@@ -175,6 +173,36 @@ void hd_dbus_open_vkb (void)
     dbus_connection_flush(connection);
   }
   dbus_message_unref(msg);
+}
+
+gboolean hd_dbus_get_slide_state (gboolean *slide_state)
+{
+  DBusMessage *msg;
+  DBusMessage *reply;
+  DBusError error;
+  gboolean ret = FALSE;
+  
+  dbus_error_init (&error);
+  
+  msg = dbus_message_new_method_call(MCE_SERVICE, MCE_REQUEST_PATH, MCE_REQUEST_IF, MCE_KEYBOARD_SLIDE_GET);
+
+  reply = dbus_connection_send_with_reply_and_block(sysbus_conn, msg, DBUS_TIMEOUT_USE_DEFAULT, &error);
+  if (!reply) {
+    g_warning ("%s: dbus_connection_send_with_reply_and_block() failed %s", __func__, error.message);
+  } else {
+    dbus_bool_t state;
+    if(dbus_message_get_args(reply, &error, DBUS_TYPE_BOOLEAN, &state, DBUS_TYPE_INVALID)) {
+      ret = TRUE;
+      *slide_state = state;
+    } else {
+      g_warning ("%s: unable to get arguments from dbus reply %s", __func__, error.message);
+    }
+    dbus_message_unref(reply);
+  }
+  
+  dbus_error_free(&error);
+  dbus_message_unref(msg);
+  return ret;
 }
 
 
@@ -312,6 +340,13 @@ hd_dbus_system_bus_signal_handler (DBusConnection *conn,
       hd_dbus_cunt = call_active && hd_dbus_tklock_on
         && (hd_render_manager_get_state()
             & (HDRM_STATE_HOME|HDRM_STATE_HOME_PORTRAIT));
+    }
+  else if (dbus_message_is_signal (msg, MCE_SIGNAL_IF, MCE_KEYBOARD_SLIDE_GET))
+    {
+      dbus_bool_t state = FALSE;
+      dbus_message_get_args (msg, NULL, DBUS_TYPE_BOOLEAN, &state,
+                             DBUS_TYPE_INVALID);
+      hd_app_mgr_inform_slide_state_changed(state);
     }
 
   return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
@@ -493,6 +528,11 @@ hd_dbus_init (HdCompMgr * hmgr)
                           "type='signal',path='" MCE_SIGNAL_PATH "',"
                           "interface='" MCE_SIGNAL_IF "',"
                           "member='" MCE_CALL_STATE_SIG "'", NULL);
+      
+      dbus_bus_add_match (sysbus_conn,
+                          "type='signal',path='" MCE_SIGNAL_PATH "',"
+                          "interface='" MCE_SIGNAL_IF "',"
+                          "member='" MCE_KEYBOARD_SLIDE_GET "'", NULL);
 
       dbus_connection_add_filter (sysbus_conn,
                                   hd_dbus_system_bus_signal_handler,
