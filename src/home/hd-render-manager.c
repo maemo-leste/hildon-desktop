@@ -1607,6 +1607,9 @@ void hd_render_manager_set_state(HDRMStateEnum state)
           /* Update the launcher's layout, pip (portrait if possible) flags and hwkbd status. */
           hd_task_navigator_update_orientation (STATE_IS_PORTRAIT (state));
 
+          clutter_actor_move_anchor_point_from_gravity (CLUTTER_ACTOR(priv->task_nav),
+                                                        CLUTTER_GRAVITY_CENTER);
+
           /* Zoom out if possible.  Otherwise if not coming from launcher
            * scroll it back to the top. */
           if (STATE_IS_APP (oldstate))
