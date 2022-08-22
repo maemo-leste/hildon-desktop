@@ -1696,7 +1696,12 @@ set_label_text_and_color (ClutterActor * label, const char * newtext,
     clutter_label_set_color (CLUTTER_LABEL (label), color);
   if (newtext && (!(text = clutter_label_get_text (CLUTTER_LABEL (label)))
                   || strcmp (newtext, text)))
-    clutter_label_set_text (CLUTTER_LABEL (label), newtext);
+    {
+      clutter_label_set_use_markup (
+            CLUTTER_LABEL (label),
+            pango_parse_markup (newtext, -1, 0, NULL, NULL, NULL, NULL));
+      clutter_label_set_text (CLUTTER_LABEL (label), newtext);
+    }
   return label;
 }
 
