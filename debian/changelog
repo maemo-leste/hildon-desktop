@@ -1,3 +1,9 @@
+hildon-desktop (1:2.2.189) unstable; urgency=medium
+
+  * hd-dbus: support additional parameter to mce blank prevent call
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Tue, 20 Sep 2022 07:08:52 +0300
+
 hildon-desktop (1:2.2.188) unstable; urgency=medium
 
   * tasknav: make sure correct anchor point is set depending on orientation
