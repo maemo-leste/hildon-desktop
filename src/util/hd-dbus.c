@@ -318,28 +318,39 @@ hd_dbus_system_bus_signal_handler (DBusConnection *conn,
 }
 
 static void
-hd_dbus_prevent_display_blanking (void)
+hd_dbus_prevent_display_blanking (gboolean setting)
 {
   DBusMessage *msg;
-  dbus_bool_t b;
+  dbus_bool_t prevent = setting;
 
-  if (sysbus_conn == NULL) {
-    g_warning ("%s: no D-Bus system bus connection", __func__);
-    return;
-  }
+  if (sysbus_conn == NULL)
+    {
+      g_warning ("%s: no D-Bus system bus connection", __func__);
+      return;
+    }
+
   msg = dbus_message_new_method_call(MCE_SERVICE, MCE_REQUEST_PATH,
                                      MCE_REQUEST_IF, MCE_PREVENT_BLANK_REQ);
-  if (msg == NULL) {
-    g_warning ("%s: could not create message", __func__);
-    return;
-  }
+  if (msg == NULL)
+    {
+      g_warning ("%s: could not create message", __func__);
+      return;
+    }
 
-  b = dbus_connection_send(sysbus_conn, msg, NULL);
-  if (!b) {
+  if (!dbus_message_append_args (msg,
+                                 DBUS_TYPE_BOOLEAN, &prevent,
+                                 DBUS_TYPE_INVALID))
+    {
+      g_warning ("%s: could not append message args", __func__);
+      dbus_message_unref(msg);
+      return ;
+    }
+
+  if (!dbus_connection_send(sysbus_conn, msg, NULL))
     g_warning ("%s: dbus_connection_send() failed", __func__);
-  } else {
+  else
     dbus_connection_flush(sysbus_conn);
-  }
+
   dbus_message_unref(msg);
 }
 
@@ -347,7 +358,7 @@ static gboolean
 display_timeout_f (gpointer unused)
 {
   /* g_warning ("%s: called", __func__); */
-  hd_dbus_prevent_display_blanking ();
+  hd_dbus_prevent_display_blanking (TRUE);
   return TRUE;
 }
 
@@ -358,11 +369,12 @@ hd_dbus_disable_display_blanking (gboolean setting)
 {
   static guint timeout_f = 0;
 
+  hd_dbus_prevent_display_blanking (setting);
+
   if (setting)
     {
-      hd_dbus_prevent_display_blanking ();
       if (!timeout_f)
-        timeout_f = g_timeout_add (30 * 1000, display_timeout_f, NULL);
+        timeout_f = g_timeout_add_seconds (30, display_timeout_f, NULL);
     }
   else if (timeout_f)
     {
