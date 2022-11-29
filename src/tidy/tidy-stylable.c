@@ -348,7 +348,7 @@ tidy_stylable_find_property (TidyStylable *stylable,
                                    TRUE);
 }
 
-static inline void
+static void
 tidy_stylable_set_property_internal (TidyStylable       *stylable,
                                      GParamSpec         *pspec,
                                      const GValue       *value,

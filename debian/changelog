@@ -1,3 +1,9 @@
+hildon-desktop (1:2.2.190) unstable; urgency=medium
+
+  * Fix compatibility with GCC 10's default flags
+
+ -- Blagovest Petrov <blagovest@petrovs.info> Tue, 29 Nov 2022 14:09:11 +0300
+
 hildon-desktop (1:2.2.189) unstable; urgency=medium
 
   * hd-dbus: support additional parameter to mce blank prevent call
