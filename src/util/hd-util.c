@@ -3,7 +3,6 @@
 #include <matchbox/core/mb-wm.h>
 #include <clutter/x11/clutter-x11.h>
 #include <cogl/cogl.h>
-#include <unistd.h>
 
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrandr.h>
@@ -352,11 +351,6 @@ hd_util_change_screen_orientation_real (MBWindowManager *wm,
   int width, height, width_mm, height_mm;
   unsigned long one = 1;
   gboolean rv = FALSE;
-
-  /* TODO: remove this hack that avoids bug in omap ddx?
-   * remove #include <unistd.h> while at it.
-   */
-  usleep(100000);
 
   if (!randr_supported(wm))
     {
