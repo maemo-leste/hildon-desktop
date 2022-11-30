@@ -56,4 +56,6 @@ guint hd_util_display_width(void);
 /* Display height, accounting for initial rotation */
 guint hd_util_display_height(void);
 
+gchar *hd_util_get_default_terminal(void);
+
 #endif

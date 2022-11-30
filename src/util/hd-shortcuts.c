@@ -24,6 +24,7 @@
 #include "hd-transition.h"
 #include "hd-orientation-lock.h"
 #include "hd-home.h"
+#include "hd-util.h"
 
 #define SHORTCUTS_INI "/usr/share/hildon-desktop/shortcuts.ini"
 
@@ -227,8 +228,11 @@ static void key_binding_func(MBWindowManager * wm, MBWMKeyBinding * binding, voi
 	case KEY_ACTION_XTERMINAL:
 		{
 			GPid pid;
-			if (hd_app_mgr_execute("/usr/bin/osso-xterm", &pid, TRUE))
+			gchar *term = hd_util_get_default_terminal();
+
+			if (hd_app_mgr_execute(term, &pid, TRUE))
 				g_spawn_close_pid(pid);
+			g_free(term);
 			break;
 		}
 
