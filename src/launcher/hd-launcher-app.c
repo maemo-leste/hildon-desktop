@@ -29,6 +29,7 @@
 
 #include "hildon-desktop.h"
 #include "hd-launcher-app.h"
+#include "hd-util.h"
 
 #include <string.h>
 
@@ -252,21 +253,12 @@ hd_launcher_app_parse_keyfile (HdLauncherItem *item,
                                              NULL);
   if ((priv->exec) && terminal) {
       gchar *old_exec = priv->exec;
-      gchar *term = NULL;
-      const gchar *term_env = g_getenv("TERMINAL");
+      gchar *term = hd_util_get_default_terminal();
 
-      if (term_env)
-        term = g_find_program_in_path(g_path_get_basename(term_env));
-      else
-        term = g_find_program_in_path(g_path_get_basename("x-terminal-emulator"));
-
-      if (term) {
-        priv->exec = g_strdup_printf("%s '%s'", term, old_exec);
-        g_free(term);
-      } else
-        priv->exec = g_strdup_printf("%s '%s'", "osso-xterm", old_exec);
+      priv->exec = g_strdup_printf("%s '%s'", term, old_exec);
 
       g_free(old_exec);
+      g_free(term);
   }
 
   priv->loading_image = g_key_file_get_string (key_file,

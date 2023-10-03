@@ -3,7 +3,6 @@
 #include <matchbox/core/mb-wm.h>
 #include <clutter/x11/clutter-x11.h>
 #include <cogl/cogl.h>
-#include <unistd.h>
 
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrandr.h>
@@ -352,11 +351,6 @@ hd_util_change_screen_orientation_real (MBWindowManager *wm,
   int width, height, width_mm, height_mm;
   unsigned long one = 1;
   gboolean rv = FALSE;
-
-  /* TODO: remove this hack that avoids bug in omap ddx?
-   * remove #include <unistd.h> while at it.
-   */
-  usleep(100000);
 
   if (!randr_supported(wm))
     {
@@ -964,4 +958,20 @@ hd_util_display_height()
     }
 
   return height;
+}
+
+gchar *hd_util_get_default_terminal(void)
+{
+  gchar *term = NULL;
+  const gchar *term_env = g_getenv("TERMINAL");
+
+  if (term_env)
+    term = g_find_program_in_path(g_path_get_basename(term_env));
+  else
+    term = g_find_program_in_path(g_path_get_basename("x-terminal-emulator"));
+
+  if (!term)
+    term = g_strdup("osso-xterm");
+
+  return term;
 }

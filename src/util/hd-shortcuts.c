@@ -24,6 +24,7 @@
 #include "hd-transition.h"
 #include "hd-orientation-lock.h"
 #include "hd-home.h"
+#include "hd-util.h"
 
 #define SHORTCUTS_INI "/usr/share/hildon-desktop/shortcuts.ini"
 
@@ -227,8 +228,11 @@ static void key_binding_func(MBWindowManager * wm, MBWMKeyBinding * binding, voi
 	case KEY_ACTION_XTERMINAL:
 		{
 			GPid pid;
-			if (hd_app_mgr_execute("/usr/bin/osso-xterm", &pid, TRUE))
+			gchar *term = hd_util_get_default_terminal();
+
+			if (hd_app_mgr_execute(term, &pid, TRUE))
 				g_spawn_close_pid(pid);
+			g_free(term);
 			break;
 		}
 
@@ -240,10 +244,17 @@ static void key_binding_func(MBWindowManager * wm, MBWMKeyBinding * binding, voi
 
 static void hd_shortcuts_add(MBWindowManager * wm, GKeyFile * file, gchar * key, unsigned int action)
 {
-	gchar *keystr = g_key_file_get_string(file, "Shortcuts", key, NULL);
+	gsize len;
+	gsize i;
+	gchar **keystrlist = g_key_file_get_string_list(file, "Shortcuts", key, &len, NULL);
 	
-	if (keystr)
-		mb_wm_keys_binding_add_with_spec(wm, keystr, key_binding_func, NULL, GUINT_TO_POINTER(action));
+	if(!keystrlist)
+		return;
+
+	for (i = 0; i < len; ++i)
+		mb_wm_keys_binding_add_with_spec(wm, keystrlist[i], key_binding_func, NULL, GUINT_TO_POINTER(action));
+
+	g_strfreev(keystrlist);
 }
 
 void hd_shortcuts_setup(MBWindowManager * wm)
