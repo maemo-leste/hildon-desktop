@@ -1,3 +1,11 @@
+hildon-desktop (1:2.2.191) unstable; urgency=medium
+
+  * Remove delay workaround during rotation
+  * Allow multiple bindings per action
+  * Better finding of default terminal application
+
+ -- Merlijn Wajer <merlijn@wizzup.org> Tue, 29 Nov 2022 14:09:11 +0300
+
 hildon-desktop (1:2.2.190) unstable; urgency=medium
 
   * Fix compatibility with GCC 10's default flags
