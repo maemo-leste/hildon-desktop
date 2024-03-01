@@ -607,6 +607,11 @@ hd_launcher_application_tile_long_clicked (HdLauncherTile *tile,
     g_signal_emit_by_name (scroll, "button-release-event", &event, NULL);
   }
 
+  ClutterActor *top_page = g_datalist_get_data (&priv->pages, HD_LAUNCHER_ITEM_TOP_CATEGORY);
+  if (priv->active_page != top_page) {
+    return;
+  }
+
   priv->editor = hd_launcher_editor_new ();
   gint x, y;
   gfloat x_align, y_align;
