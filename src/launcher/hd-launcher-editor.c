@@ -115,6 +115,11 @@ _hd_launcher_editor_load (HdLauncherEditor *editor)
       GtkIconInfo *icon_info = NULL;
       GdkPixbuf *pixbuf = NULL;
 
+      const gchar* category = hd_launcher_item_get_category(item);
+      if (strcmp(category, "Main")) {
+          goto next;
+      }
+
       icon_name = hd_launcher_item_get_icon_name (item);
 
       /* The desktop file contains path to the icon. */
@@ -170,6 +175,7 @@ _hd_launcher_editor_load (HdLauncherEditor *editor)
                  COL_DESKTOP_ID, hd_launcher_item_get_id(item),
                  -1);
 
+next:
       entries = entries->next;
     }
 }
