@@ -50,15 +50,9 @@ cat << EOF > /etc/xdg/menus/hildon.menu.tmp
 
   <Menu>
     <Name>Debian</Name>
-    <Directory>debian.directory</Directory>
-
-    <AppDir>/usr/share/applications/debian</AppDir>
-    <DirectoryDir>/usr/share/applications/debian</DirectoryDir>
-
-    <Include>
-      <All/>
-    </Include>
-    <Exclude>
+    <MergeFile>debian.menu</MergeFile>
+  </Menu>
+</Menu>
 EOF
 
 mkdir -p /usr/share/applications/debian
@@ -66,15 +60,33 @@ cd /usr/share/applications/debian
 rm -f *.desktop
 ln -s ../*.desktop .
 
+cat << EOF > /etc/xdg/menus/debian.menu.tmp
+<!DOCTYPE Menu PUBLIC "-//freedesktop//DTD Menu 1.0//EN"
+ "http://www.freedesktop.org/standards/menu-spec/menu-1.0.dtd">
+
+<Menu>
+  <Name>Debian</Name>
+  <Directory>debian.directory</Directory>
+
+  <AppDir>/usr/share/applications/debian</AppDir>
+  <DirectoryDir>/usr/share/applications/debian</DirectoryDir>
+
+  <Include>
+    <All/>
+  </Include>
+  <Exclude>
+EOF
+
+
 for i in /usr/share/applications/hildon/*.desktop; do
-	echo "      <Filename>$(basename $i)</Filename>" >> /etc/xdg/menus/hildon.menu.tmp
+	echo "    <Filename>$(basename $i)</Filename>" >> /etc/xdg/menus/debian.menu.tmp
 done
 
-cat <<EOF >> /etc/xdg/menus/hildon.menu.tmp
-    </Exclude>
-  </Menu>
+cat <<EOF >> /etc/xdg/menus/debian.menu.tmp
+  </Exclude>
 </Menu>
 EOF
 
 #computers
 mv /etc/xdg/menus/hildon.menu.tmp /etc/xdg/menus/hildon.menu
+mv /etc/xdg/menus/debian.menu.tmp /etc/xdg/menus/debian.menu
