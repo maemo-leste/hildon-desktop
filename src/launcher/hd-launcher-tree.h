@@ -86,7 +86,22 @@ void hd_launcher_tree_ensure_user_menu (void);
   "\t<AppDir>%s/applications/hildon</AppDir>\n" \
   "\t<DirectoryDir>%s/applications/hildon</DirectoryDir>\n\n"
 #define HD_LAUNCHER_MENU_END \
-  "\t<MergeDir>%s/menus/hildon</MergeDir>\n\n" \
+  "\t<Menu>\n" \
+  "\t\t<Name>Debian</Name>\n" \
+  "\t\t<MergeDir>%s/menus/hildon</MergeDir>\n\n" \
+  "\t</Menu>\n" \
+  "</Menu>\n"
+
+#define HD_LAUNCHER_SUBMENU_START \
+  "<!DOCTYPE Menu PUBLIC \"-//freedesktop//DTD Menu 1.0//EN\"\n" \
+  " \"http://www.freedesktop.org/standards/menu-spec/menu-1.0.dtd\">\n\n" \
+  "<Menu>\n" \
+  "\t<Name>%s</Name>\n" \
+  "\t<MergeFile type=\"type\">/etc/xdg/menus/%s.menu</MergeFile>\n" \
+  "\t<AppDir>%s/applications/%s</AppDir>\n" \
+  "\t<DirectoryDir>%s/applications/%s</DirectoryDir>\n\n"
+#define HD_LAUNCHER_SUBMENU_END \
+  "\t<MergeDir>%s/menus/%s</MergeDir>\n\n" \
   "</Menu>\n"
 
 G_END_DECLS

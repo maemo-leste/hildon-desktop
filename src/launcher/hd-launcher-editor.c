@@ -90,6 +90,13 @@ enum
   LAST_SIGNAL
 };
 
+enum
+{
+  PROP_CATEGORY = 1,
+  N_PROPERTIES
+};
+static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
+
 static guint launcher_editor_signals[LAST_SIGNAL] = {0, };
 
 G_DEFINE_TYPE_WITH_CODE (HdLauncherEditor,
@@ -116,7 +123,7 @@ _hd_launcher_editor_load (HdLauncherEditor *editor)
       GdkPixbuf *pixbuf = NULL;
 
       const gchar* category = hd_launcher_item_get_category(item);
-      if (strcmp(category, "Main")) {
+      if (editor->category && strcmp(category, editor->category)) {
           goto next;
       }
 
@@ -335,36 +342,80 @@ _hd_launcher_editor_save (HdLauncherEditor *editor)
       return;
     }
 
-  menu_filename = g_build_filename (g_get_user_config_dir (),
-                                    "menus",
-                                    HD_LAUNCHER_MENU_FILE,
-                                    NULL);
-  menu = g_string_new (NULL);
-  g_string_append_printf (menu, HD_LAUNCHER_MENU_START,
-                          g_get_user_data_dir (),
-                          g_get_user_data_dir ());
-  g_string_append (menu, LAYOUT_START);
-
-  do
+  if (editor->category && strcmp(editor->category, "Main"))
     {
-      gchar *name;
-      gtk_tree_model_get (priv->model, &iter,
-                          COL_DESKTOP_ID, &name,
-                          -1);
-      g_string_append_printf (menu, LAYOUT_ENTRY, name);
-      g_free (name);
+      gchar * lowercase_category = g_ascii_strdown(editor->category, -1);
+      gchar * lowercase_filename = g_strdup_printf("%s%s", lowercase_category, ".menu");
+      menu_filename = g_build_filename (g_get_user_config_dir (),
+                                        "menus",
+                                        "hildon",
+                                        lowercase_filename,
+                                        NULL);
+      g_free(lowercase_filename);
+
+      menu = g_string_new (NULL);
+      g_string_append_printf (menu, HD_LAUNCHER_SUBMENU_START,
+                              editor->category, lowercase_category,
+                              g_get_user_data_dir (), lowercase_category,
+                              g_get_user_data_dir (), lowercase_category);
+      g_string_append (menu, LAYOUT_START);
+
+      do
+        {
+          gchar *name;
+          gtk_tree_model_get (priv->model, &iter,
+                              COL_DESKTOP_ID, &name,
+                              -1);
+          g_string_append_printf (menu, LAYOUT_ENTRY, name);
+          g_free (name);
+        }
+      while (gtk_tree_model_iter_next (priv->model, &iter));
+
+      g_string_append (menu, LAYOUT_END);
+      g_string_append_printf (menu, HD_LAUNCHER_SUBMENU_END,
+                              g_get_user_config_dir (),
+                              lowercase_category);
+
+      g_file_set_contents (menu_filename,
+                           menu->str, -1,
+                           NULL);
+      g_string_free (menu, TRUE);
+      g_free (menu_filename);
+      g_free(lowercase_category);
     }
-  while (gtk_tree_model_iter_next (priv->model, &iter));
+  else
+    {
+      menu_filename = g_build_filename (g_get_user_config_dir (),
+                                        "menus",
+                                        HD_LAUNCHER_MENU_FILE,
+                                        NULL);
+      menu = g_string_new (NULL);
+      g_string_append_printf (menu, HD_LAUNCHER_MENU_START,
+                              g_get_user_data_dir (),
+                              g_get_user_data_dir ());
+      g_string_append (menu, LAYOUT_START);
 
-  g_string_append (menu, LAYOUT_END);
-  g_string_append_printf (menu, HD_LAUNCHER_MENU_END,
-                          g_get_user_config_dir ());
+      do
+        {
+          gchar *name;
+          gtk_tree_model_get (priv->model, &iter,
+                              COL_DESKTOP_ID, &name,
+                              -1);
+          g_string_append_printf (menu, LAYOUT_ENTRY, name);
+          g_free (name);
+        }
+      while (gtk_tree_model_iter_next (priv->model, &iter));
 
-  g_file_set_contents (menu_filename,
-                       menu->str, -1,
-                       NULL);
-  g_string_free (menu, TRUE);
-  g_free (menu_filename);
+      g_string_append (menu, LAYOUT_END);
+      g_string_append_printf (menu, HD_LAUNCHER_MENU_END,
+                              g_get_user_config_dir ());
+
+      g_file_set_contents (menu_filename,
+                           menu->str, -1,
+                           NULL);
+      g_string_free (menu, TRUE);
+      g_free (menu_filename);
+    }
 
   g_signal_emit (editor, launcher_editor_signals[DONE], 0, TRUE);
 }
@@ -381,11 +432,55 @@ hd_launcher_editor_dispose (GObject *object)
 }
 
 static void
+hd_launcher_editor_finalize (GObject *object)
+{
+  HdLauncherEditor *editor = HD_LAUNCHER_EDITOR (object);
+
+  g_free(editor->category);
+
+  G_OBJECT_CLASS (hd_launcher_editor_parent_class)->finalize (object);
+}
+
+static void
 hd_launcher_editor_constructed (GObject *object)
 {
   HdLauncherEditor *editor = HD_LAUNCHER_EDITOR (object);
 
   _hd_launcher_editor_load (editor);
+}
+
+static void
+hd_launcher_editor_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec) {
+  HdLauncherEditor *editor = HD_LAUNCHER_EDITOR (object);
+
+  switch (prop_id)
+    {
+    case PROP_CATEGORY:
+      g_free (editor->category);
+      editor->category = g_value_dup_string (value);
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+    }
+}
+
+static void
+hd_launcher_editor_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  HdLauncherEditor *editor = HD_LAUNCHER_EDITOR (object);
+
+  switch (prop_id)
+    {
+    case PROP_CATEGORY:
+      g_value_set_string (value, editor->category);
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+    }
 }
 
 static void
@@ -395,6 +490,10 @@ hd_launcher_editor_class_init (HdLauncherEditorClass *klass)
 
   object_class->constructed = hd_launcher_editor_constructed;
   object_class->dispose = hd_launcher_editor_dispose;
+  object_class->finalize = hd_launcher_editor_finalize;
+
+  object_class->set_property = hd_launcher_editor_set_property;
+  object_class->get_property = hd_launcher_editor_get_property;
 
   launcher_editor_signals[DONE] =
     g_signal_new (I_("done"),
@@ -405,6 +504,17 @@ hd_launcher_editor_class_init (HdLauncherEditorClass *klass)
                   g_cclosure_marshal_VOID__BOOLEAN,
                   G_TYPE_NONE, 1,
                   G_TYPE_BOOLEAN);
+
+  obj_properties[PROP_CATEGORY] =
+    g_param_spec_string ("category",
+                         "Category",
+                         "Category (of submenu) to render",
+                         NULL  /* default value */,
+                         G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE);
+
+  g_object_class_install_properties (object_class,
+                                     N_PROPERTIES,
+                                     obj_properties);
 }
 
 static void
