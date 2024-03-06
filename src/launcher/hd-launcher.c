@@ -607,7 +607,36 @@ hd_launcher_application_tile_long_clicked (HdLauncherTile *tile,
     g_signal_emit_by_name (scroll, "button-release-event", &event, NULL);
   }
 
-  priv->editor = hd_launcher_editor_new ();
+  const char *active_category = NULL;
+  ClutterActor *top_page = g_datalist_get_data (&priv->pages, HD_LAUNCHER_ITEM_TOP_CATEGORY);
+  if (priv->active_page == top_page) {
+    active_category = "Main";
+  } else {
+    GList *entries;
+    HdLauncherTree *tree;
+
+    tree = hd_app_mgr_get_tree();
+    entries = hd_launcher_tree_get_items(tree);
+    while (entries) {
+      HdLauncherItem *item = entries->data;
+      if (hd_launcher_item_get_item_type (item) != HD_CATEGORY_LAUNCHER) {
+          entries = entries->next;
+          continue;
+      }
+
+      ClutterActor *page = g_datalist_get_data (&priv->pages, hd_launcher_item_get_id (item));
+
+      if (priv->active_page == page) {
+        active_category = hd_launcher_item_get_id(item);
+        break;
+      }
+
+      entries = entries->next;
+    }
+  }
+
+  priv->editor = g_object_new(HD_TYPE_LAUNCHER_EDITOR, "category", active_category, NULL);
+
   gint x, y;
   gfloat x_align, y_align;
 

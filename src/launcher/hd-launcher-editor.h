@@ -51,6 +51,7 @@ struct _HdLauncherEditor
   HildonWindow parent;
 
   HdLauncherEditorPrivate *priv;
+  gchar *category;
 };
 
 struct _HdLauncherEditorClass
