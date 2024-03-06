@@ -1,3 +1,9 @@
+hildon-desktop (1:2.2.192) unstable; urgency=medium
+
+  * Fix menu sorting for the main menu and debian submenu
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Wed, 06 Mar 2024 19:42:26 +0100
+
 hildon-desktop (1:2.2.191) unstable; urgency=medium
 
   * Remove delay workaround during rotation
