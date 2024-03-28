@@ -19,5 +19,6 @@ gboolean hd_dbus_launch_service (DBusConnection *connection,
 void hd_dbus_send_event (char *value);
 void hd_dbus_send_desktop_orientation_changed (gboolean to_portrait);
 void hd_dbus_open_vkb (void);
+gboolean hd_dbus_get_slide_state (gboolean *slide_state);
 
 #endif
