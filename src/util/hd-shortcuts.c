@@ -48,7 +48,6 @@ enum {
 static void take_screenshot(void)
 {
 	char *path, *filename;
-	char *mydocsdir;
 	static gchar datestamp[255];
 	static time_t secs = 0;
 	struct tm *tm = NULL;
@@ -65,22 +64,23 @@ static void take_screenshot(void)
 		return;
 
 	client = gconf_client_get_default();
-	mydocsdir = g_strdup(getenv("MYDOCSDIR"));
 
 	path = gconf_client_get_string(client, GCONF_SCREENSHOT_PATH, NULL);
 
 	if (!path || !*path) {
-		if (!mydocsdir) {
-			g_warning("Screenshot failed, environment variable MYDOCSDIR missing"
+		const gchar *xdgdir = g_get_user_special_dir(G_USER_DIRECTORY_PICTURES);
+
+		g_free(path);
+
+		if (!xdgdir) {
+			g_warning("Screenshot failed, environment variable XDG_PICTURES_DIR missing"
 				  "or gconf option \'%s\' not set", GCONF_SCREENSHOT_PATH);
-			g_free(path);
 			return;
 		} else {
-			path = g_strdup_printf("%s/.images/Screenshots", mydocsdir);
+			path = g_strdup_printf("%s/Screenshots", xdgdir);
 		}
 	}
 
-	g_free(mydocsdir);
 	g_object_unref(client);
 
 	g_mkdir_with_parents(path, 0770);
