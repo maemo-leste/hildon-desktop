@@ -1,3 +1,9 @@
+hildon-desktop (1:2.2.194) unstable; urgency=medium
+
+  * user-guide: use local (html) user-guide
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Fri, 14 Jun 2024 20:54:00 +0200
+
 hildon-desktop (1:2.2.193) unstable; urgency=medium
 
   * hd-shortcuts: use XDG_PICTURES_DIR instead of MYDOCSDIR for screenshots
