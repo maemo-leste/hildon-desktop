@@ -1,3 +1,9 @@
+hildon-desktop (1:2.2.195) unstable; urgency=medium
+
+  * tidy-blur-group: do not apply saturation shader after blur is complete
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Sat, 10 Aug 2024 15:33:32 +0300
+
 hildon-desktop (1:2.2.194) unstable; urgency=medium
 
   * user-guide: use local (html) user-guide
