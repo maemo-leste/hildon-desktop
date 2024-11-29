@@ -1,3 +1,9 @@
+hildon-desktop (1:2.2.196) unstable; urgency=medium
+
+  * version bump to make builder happy (rebuild with MB 0.2.107)
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Fri, 29 Nov 2024 17:23:42 +0200
+
 hildon-desktop (1:2.2.195) unstable; urgency=medium
 
   * tidy-blur-group: do not apply saturation shader after blur is complete
