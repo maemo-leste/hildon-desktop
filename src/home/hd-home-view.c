@@ -47,6 +47,7 @@
 #include <glib/gstdio.h>
 #include <gconf/gconf-client.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
+#include <inttypes.h>
 
 #define BACKGROUND_COLOR {0, 0, 0, 0xff}
 #define CACHED_BACKGROUND_IMAGE_FILE_PNG "%s/.backgrounds/background-%u.png"
@@ -1029,7 +1030,7 @@ hd_home_view_applet_press (ClutterActor       *applet,
   /* Store the modifed time of the applet */
   time (&wm_applet->modified);
 
-  modified = g_strdup_printf ("%ld", wm_applet->modified);
+  modified = g_strdup_printf ("%"PRIdMAX, wm_applet->modified);
 
 	modified_key = g_strdup_printf (GCONF_KEY_MODIFIED, wm_applet->applet_id);	
 
