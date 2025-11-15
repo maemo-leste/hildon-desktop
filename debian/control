@@ -10,6 +10,7 @@ Build-Depends:
  maemo-launcher-dev,
  libhildonmime-dev,
  libprofile-dev,
+ libgdk-pixbuf-xlib-2.0-dev,
  mce-dev,
 Standards-Version: 4.3.0
 
