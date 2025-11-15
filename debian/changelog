@@ -1,3 +1,9 @@
+hildon-desktop (1:2.2.197) unstable; urgency=medium
+
+  * Fix printing of time_t on 32 bit
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Sat, 15 Nov 2025 21:18:37 +0100
+
 hildon-desktop (1:2.2.196) unstable; urgency=medium
 
   * version bump to make builder happy (rebuild with MB 0.2.107)
