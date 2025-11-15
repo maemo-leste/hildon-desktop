@@ -29,6 +29,7 @@
 #include <matchbox/theme-engines/mb-wm-theme.h>
 
 #include <gconf/gconf-client.h>
+#include <inttypes.h>
 
 #define OPERATOR_APPLET_ID "_HILDON_OPERATOR_APPLET"
 
@@ -149,7 +150,7 @@ hd_home_applet_init (MBWMObject *this, va_list vap)
 
       time (&applet->modified);
 
-      modified = g_strdup_printf ("%ld", applet->modified);
+      modified = g_strdup_printf ("%"PRIdMAX, (intmax_t)applet->modified);
         
       gconf_client_set_string (gconf_client,
                                modified_key,
